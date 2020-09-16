@@ -1,0 +1,6 @@
+#!/bin/bash
+
+function install {
+    chroot ${MK_ISO_WORKDIR}/squashfs/ apt update
+    chroot ${MK_ISO_WORKDIR}/squashfs/ apt install -y "${MK_ISO_PACKAGES}"
+}
