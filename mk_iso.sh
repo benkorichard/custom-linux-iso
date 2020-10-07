@@ -60,7 +60,7 @@ function copy_scripts {
 
 	if [[ ! -d ${MK_ISO_SOURCE} ]]
 	then
-		echo "Source directory ${MK_ISO_SOURCE} does not exist."
+		log "Source directory ${MK_ISO_SOURCE} does not exist."
 	else
 		[[ -d ${copy_to} ]] \
 			|| mkdir ${copy_to}
@@ -69,9 +69,8 @@ function copy_scripts {
 		do
 			[[ -x ${file} ]] \
 				|| chmod +x ${file}
-			echo ""
-			echo "Copying ${file} to ${copy_to}"
-			echo ""
+
+			log "Copying ${file} to ${copy_to}"
 			cp ${file} ${copy_to}
 		done
 	fi
@@ -117,19 +116,24 @@ function install_packages {
 		MK_ISO_PACKAGES=$(cat ${MK_ISO_PACKAGE_FILE})
 
 		IFS="${old_IFS}"
-		echo "Installing packages: ${MK_ISO_PACKAGES}"
-		install
+
+		log "Installing packages: ${MK_ISO_PACKAGES}"
+		install > /dev/null
 	elif [[ "${from}" == 'list' ]]
 	then
-		echo "Installing packages: ${MK_ISO_PACKAGES}"
+		log "Installing packages: ${MK_ISO_PACKAGES}"
 		install > /dev/null
 	else
-		echo ""
-		echo "No packages will be installed."
-		echo ""
+		log "No packages will be installed."
 	fi
 
 	umount ${MK_ISO_WORKDIR}/squashfs/run
+}
+
+function log {
+	local now=$(date "+%H:%M:%S %Y-%m-%d")
+
+	echo "${now} [$(basename ${0})] ${1}"
 }
 
 function make_iso {
@@ -143,9 +147,7 @@ function make_iso {
 
 	if [[ -z ${MK_ISO_ORIGINAL} ]]
 	then
-		echo ""
-		echo "Downloading Ubuntu 20.04.1 ..."
-		echo ""
+		log "Downloading Ubuntu 20.04.1 ..."
 
 		MK_ISO_ORIGINAL='/tmp/ubuntu-20.04-server.iso'
 
@@ -154,20 +156,24 @@ function make_iso {
 
 	mount -o loop ${MK_ISO_ORIGINAL} ${MK_ISO_WORKDIR}/mount
 
+	log "Extracting the image content"
 	rsync	--exclude=/casper/filesystem.squashfs \
 			--exclude=ubuntu -avvP \
 			${MK_ISO_WORKDIR}/mount/ \
-			${MK_ISO_WORKDIR}/newfs
+			${MK_ISO_WORKDIR}/newfs > /dev/null
 
-	unsquashfs -f -d ${MK_ISO_WORKDIR}/squashfs/ ${MK_ISO_WORKDIR}/mount/casper/filesystem.squashfs
+	log "Creating temporary image file system"
+	unsquashfs -f -d ${MK_ISO_WORKDIR}/squashfs/ ${MK_ISO_WORKDIR}/mount/casper/filesystem.squashfs > /dev/null
 
 	[[ -n ${MK_ISO_SOURCE} ]] \
 		&& copy_scripts
 
 	install_packages ${MK_ISO_PACKAGE_SOURCE}
 
-	mksquashfs ${MK_ISO_WORKDIR}/squashfs ${MK_ISO_WORKDIR}/newfs/casper/filesystem.squashfs -b 1048576
+	log "Creating new image filesystem"
+	mksquashfs ${MK_ISO_WORKDIR}/squashfs ${MK_ISO_WORKDIR}/newfs/casper/filesystem.squashfs -b 1048576 > /dev/null
 
+	log "Creating ${MK_ISO_OUTPUT}"
 	genisoimage -D -r -V "Custom Image" \
 						-cache-inodes -J -l \
 						-b isolinux/isolinux.bin \
@@ -177,13 +183,11 @@ function make_iso {
 						-boot-info-table \
 						-input-charset utf-8 \
 						-o "${MK_ISO_OUTPUT}" \
-						"${MK_ISO_WORKDIR}/newfs"
+						"${MK_ISO_WORKDIR}/newfs" > /dev/null
 
 	if [[ ${?} -eq 0 ]]
 	then
-		echo ""
-		echo "Created customized ISO: ${MK_ISO_OUTPUT}"
-		echo ""
+		log "Created customized ISO: ${MK_ISO_OUTPUT}"
 	fi
 }
 
