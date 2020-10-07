@@ -54,9 +54,9 @@ function cleanup {
 
 function copy_scripts {
 	[[ -n ${MK_ISO_DESTINATION} ]] \
-		|| MK_ISO_DESTINATION='squashfs/usr/sbin/'
+		|| MK_ISO_DESTINATION='/usr/sbin/'
 
-	local copy_to="${MK_ISO_WORKDIR}/${MK_ISO_DESTINATION}"
+	local copy_to="${MK_ISO_WORKDIR}/squashfs${MK_ISO_DESTINATION}"
 
 	if [[ ! -d ${MK_ISO_SOURCE} ]]
 	then
@@ -117,11 +117,12 @@ function install_packages {
 		MK_ISO_PACKAGES=$(cat ${MK_ISO_PACKAGE_FILE})
 
 		IFS="${old_IFS}"
-
+		echo "Installing packages: ${MK_ISO_PACKAGES}"
 		install
 	elif [[ "${from}" == 'list' ]]
 	then
-		install
+		echo "Installing packages: ${MK_ISO_PACKAGES}"
+		install > /dev/null
 	else
 		echo ""
 		echo "No packages will be installed."
